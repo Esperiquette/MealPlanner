@@ -1,0 +1,458 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Meal Planner</title><style>
+:root{--bg:#f3efe6;--fg:#33312c;--sub:#8a8478;--line:#e2dcce;--accent:#8b9a7a;--accent-d:#71805f;--card:#fbf9f4;--radius:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+header{padding:1.2rem 1.2rem .4rem;text-align:center;position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-weight:600;font-size:1.15rem;letter-spacing:.03em;margin:0}
+#userInfo{font-size:.7rem;color:var(--sub);margin-top:.3rem}
+#signOutBtn{position:absolute;right:1rem;top:1.3rem;background:none;border:none;color:var(--sub);font-size:.7rem;text-decoration:underline;padding:.3rem}
+
+.week-nav{display:flex;align-items:center;justify-content:center;gap:.9rem;padding:.7rem 1rem .2rem}
+.week-nav button{background:var(--card);border:1px solid var(--line);color:var(--accent-d);width:2rem;height:2rem;border-radius:50%;font-size:1rem;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0}
+.week-range{font-size:.78rem;color:var(--sub);font-weight:600;min-width:9rem;text-align:center}
+.today-link{display:block;margin:.15rem auto 0;background:none;border:none;color:var(--accent-d);font-size:.68rem;font-weight:700;text-decoration:underline;padding:.15rem}
+
+.tabs{display:flex;overflow-x:auto;gap:.4rem;padding:.6rem 1rem 1rem;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:.45rem .8rem;border-radius:14px;font-size:.72rem;font-weight:600;color:var(--sub);background:var(--card);border:1px solid var(--line);white-space:nowrap;text-align:center;line-height:1.3}
+.tab .tab-date{display:block;font-size:.85rem;font-weight:700}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.tab.today:not(.active){border-color:var(--accent);color:var(--accent-d)}
+
+main{padding:0 1rem 7.5rem;max-width:520px;margin:0 auto}
+.day-panel{display:none;animation:fade .25s ease}
+.day-panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.meal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;margin-bottom:.8rem;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.meal-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-d);font-weight:700;margin-bottom:.5rem}
+.meal-card textarea.meal-name{width:100%;border:none;background:transparent;font-family:inherit;font-size:.95rem;font-weight:600;color:var(--fg);outline:none;padding:.2rem 0;border-bottom:1px solid var(--line);margin-bottom:.6rem;resize:none;overflow:hidden;line-height:1.35;white-space:pre-wrap;word-break:break-word}
+input::placeholder,textarea::placeholder{color:#c3bca9}
+
+.overview-btn{display:block;margin:0 auto .2rem;background:none;border:none;color:var(--accent-d);font-size:.75rem;font-weight:700;letter-spacing:.03em;text-decoration:underline;padding:.2rem}
+.ov-day{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:.9rem 1.1rem;margin-bottom:.7rem}
+.ov-day h3{font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-d);font-weight:700;margin:0 0 .6rem;padding-bottom:.5rem;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}
+.ov-day h3 span.d{color:var(--sub);font-weight:600;letter-spacing:.02em;text-transform:none}
+.ov-meal{display:flex;gap:.8rem;padding:.4rem 0}
+.ov-meal + .ov-meal{border-top:1px dashed var(--line)}
+.ov-meal .lbl{flex:0 0 4.6rem;font-size:.66rem;letter-spacing:.06em;text-transform:uppercase;color:var(--sub);font-weight:600;padding-top:.15rem}
+.ov-meal .val{font-size:.88rem;color:var(--fg);font-weight:600;line-height:1.35}
+.ov-meal .val.empty{color:#c3bca9;font-weight:400;font-style:italic}
+
+.ing-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem}
+.ing-have{flex:0 0 auto;width:1.15rem;height:1.15rem;border-radius:50%;border:1.5px solid var(--accent);background:none;display:flex;align-items:center;justify-content:center;padding:0}
+.ing-have svg{width:.7rem;height:.7rem;fill:none;stroke:#fff;stroke-width:3}
+.ing-have.have{background:var(--accent)}
+.ing-row input.qty{width:3.4rem;flex:0 0 auto;border:none;border-bottom:1px solid var(--line);background:transparent;font-family:inherit;font-size:.8rem;color:var(--sub);outline:none;padding:.25rem 0;text-align:left}
+.ing-row input.name{flex:1;min-width:0;border:none;border-bottom:1px solid var(--line);background:transparent;font-family:inherit;font-size:.85rem;color:var(--fg);outline:none;padding:.25rem 0}
+.ing-row .rm{flex:0 0 auto;background:none;border:none;color:#c3bca9;font-size:1.1rem;line-height:1;padding:.2rem .1rem}
+.add-ing{background:none;border:none;color:var(--accent-d);font-size:.78rem;font-weight:700;padding:.4rem 0 0;letter-spacing:.02em}
+
+.fab-row{position:fixed;bottom:1.4rem;left:0;right:0;display:flex;justify-content:center;gap:.6rem;z-index:6;padding:0 1rem}
+.fab{background:var(--accent);color:#fff;border:none;padding:.85rem 1.5rem;border-radius:999px;font-size:.8rem;font-weight:700;letter-spacing:.03em;box-shadow:0 4px 14px rgba(90,100,70,.35)}
+.fab:active{background:var(--accent-d)}
+.fab.secondary{background:var(--card);color:var(--accent-d);border:1px solid var(--accent);box-shadow:none}
+
+#toast{position:fixed;top:1rem;left:50%;transform:translateX(-50%) translateY(-150%);background:var(--accent-d);color:#fff;font-size:.8rem;font-weight:600;padding:.6rem 1.2rem;border-radius:999px;z-index:20;transition:transform .25s ease;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+#modal,#overviewModal{display:none;position:fixed;inset:0;background:rgba(40,38,32,.45);align-items:flex-end;justify-content:center;z-index:10}
+#modal.show,#overviewModal.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:1.4rem 1.4rem calc(1.4rem + env(safe-area-inset-bottom));max-height:78vh;overflow:auto}
+.sheet h2{font-weight:600;font-size:1rem;margin:0 0 1rem}
+.sheet button.close-btn{margin-top:1.2rem;width:100%;background:var(--accent);color:#fff;border:none;padding:.8rem;border-radius:999px;font-size:.85rem;font-weight:700}
+
+.gl-sec-title{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-d);font-weight:700;margin:1rem 0 .3rem}
+.gl-sec-title:first-child{margin-top:0}
+.gl-item{width:100%;display:flex;align-items:center;gap:.7rem;background:none;border:none;border-bottom:1px solid var(--line);padding:.6rem 0;font-family:inherit;text-align:left}
+.gl-item:last-of-type{border-bottom:1px solid var(--line)}
+.gl-dot{flex:0 0 auto;width:1.15rem;height:1.15rem;border-radius:50%;border:1.5px solid var(--accent);display:flex;align-items:center;justify-content:center}
+.gl-dot svg{width:.7rem;height:.7rem;fill:none;stroke:#fff;stroke-width:3}
+.gl-item.have .gl-dot{background:var(--accent)}
+.gl-name{flex:1;font-size:.88rem;color:var(--fg)}
+.gl-item.have .gl-name{color:var(--sub);text-decoration:line-through}
+.gl-qty{font-size:.78rem;color:var(--sub);white-space:nowrap}
+.gl-item.have .gl-qty{color:#c3bca9}
+.gl-empty{color:var(--sub);font-size:.85rem;padding:.5rem 0}
+
+#loginWrap{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:1.5rem}
+#loginBox{width:100%;max-width:300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem}
+#loginBox h2{text-align:center;font-weight:600;font-size:1rem;margin:0 0 1.2rem}
+#loginBox input{width:100%;border:none;border-bottom:1px solid var(--line);margin-bottom:1rem;padding:.55rem 0;font-family:inherit;font-size:.9rem;background:transparent;color:var(--fg);outline:none}
+#loginBox button{width:100%;background:var(--accent);color:#fff;border:none;padding:.75rem;border-radius:999px;font-size:.85rem;font-weight:700;margin-top:.3rem}
+#loginErr{color:#b3543d;font-size:.72rem;min-height:1em;margin-top:-.4rem;margin-bottom:.6rem}
+.hidden{display:none!important}
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBxGKVXPMk_MH3GJA0KK0nGSMdmwySfnXw",
+    authDomain: "food-84ee1.firebaseapp.com",
+    databaseURL: "https://food-84ee1-default-rtdb.firebaseio.com",
+    projectId: "food-84ee1",
+    storageBucket: "food-84ee1.firebasestorage.app",
+    messagingSenderId: "1077540752155",
+    appId: "1:1077540752155:web:50e91eaf10718d784c21be",
+    measurementId: "G-WPMVJZQDEZ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  let localData = {};
+  let groceryStatus = {};
+  let statusListenerStarted = false;
+  let toastTimer = null;
+  let unsubscribePlan = null;
+
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const meals = ['Breakfast','Lunch','Dinner'];
+
+  function mondayOf(date){
+    const d = new Date(date);
+    const dow = (d.getDay() + 6) % 7; // Mon=0..Sun=6
+    d.setDate(d.getDate() - dow);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  function addDays(date, n){ const d = new Date(date); d.setDate(d.getDate() + n); return d; }
+  function isoDate(date){
+    const y = date.getFullYear(), m = String(date.getMonth()+1).padStart(2,'0'), d = String(date.getDate()).padStart(2,'0');
+    return `${y}-${m}-${d}`;
+  }
+  function shortDate(date){ return date.toLocaleDateString('en-US', { month:'short', day:'numeric' }); }
+  function sameDay(a,b){ return isoDate(a) === isoDate(b); }
+
+  let currentMonday = mondayOf(new Date());
+  let weekDates = days.map((_, i) => addDays(currentMonday, i));
+  function weekId(){ return isoDate(currentMonday); }
+
+  const tabsEl = document.getElementById('tabs');
+  const mainEl = document.getElementById('main');
+
+  function blankMeal(){ return { meal: '', ingredients: [{ name:'', qty:'' }] }; }
+
+  days.forEach((d, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (i===0 ? ' active' : '');
+    tab.id = 'tab-' + d;
+    tab.innerHTML = `${d}<span class="tab-date"></span>`;
+    tab.onclick = () => showDay(d);
+    tabsEl.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'day-panel' + (i===0 ? ' active' : '');
+    panel.id = 'panel-' + d;
+    meals.forEach(m => {
+      const id = d + '-' + m;
+      localData[id] = blankMeal();
+      const card = document.createElement('div');
+      card.className = 'meal-card';
+      card.id = 'card-' + id;
+      card.innerHTML = `<div class="meal-label">${m}</div>
+        <textarea class="meal-name" rows="1" placeholder="What's cooking?" id="meal-${id}" data-id="${id}"></textarea>
+        <div class="ing-list" id="ing-list-${id}"></div>
+        <button type="button" class="add-ing" data-id="${id}">+ Add ingredient</button>`;
+      panel.appendChild(card);
+    });
+    mainEl.appendChild(panel);
+  });
+
+  function renderTabLabels(){
+    const today = new Date();
+    days.forEach((d, i) => {
+      const date = weekDates[i];
+      const tab = document.getElementById('tab-' + d);
+      tab.querySelector('.tab-date').textContent = date.getDate();
+      tab.classList.toggle('today', sameDay(date, today));
+    });
+    document.getElementById('weekRange').textContent = `${shortDate(weekDates[0])} \u2013 ${shortDate(weekDates[6])}`;
+  }
+  renderTabLabels();
+
+  function showDay(d){
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', days[i]===d));
+    document.querySelectorAll('.day-panel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+d));
+  }
+
+  function showToast(msg){
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 1600);
+  }
+
+  function saveMeal(id){
+    set(ref(db, 'mealplan/' + weekId() + '/' + id), localData[id]);
+  }
+
+  function renderIngredients(id){
+    const container = document.getElementById('ing-list-' + id);
+    if (container.contains(document.activeElement)) return; // don't disrupt active typing
+    const list = (localData[id].ingredients && localData[id].ingredients.length) ? localData[id].ingredients : [{name:'',qty:''}];
+    container.innerHTML = '';
+    list.forEach((ing, idx) => {
+      const row = document.createElement('div');
+      const key = keyFor(ing.name || '');
+      const isHave = key && groceryStatus[key];
+      row.className = 'ing-row';
+      row.innerHTML = `<button type="button" class="ing-have${isHave ? ' have' : ''}" data-id="${id}" data-idx="${idx}" title="${isHave ? 'Have it' : 'Need it'}">${isHave ? '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>' : ''}</button>
+        <input class="qty" placeholder="qty" value="${(ing.qty||'').replace(/"/g,'&quot;')}" data-id="${id}" data-idx="${idx}" data-f="qty">
+        <input class="name" placeholder="Ingredient" value="${(ing.name||'').replace(/"/g,'&quot;')}" data-id="${id}" data-idx="${idx}" data-f="name">
+        <button type="button" class="rm" data-id="${id}" data-idx="${idx}">&times;</button>`;
+      container.appendChild(row);
+    });
+  }
+
+  days.forEach(d => meals.forEach(m => renderIngredients(d + '-' + m)));
+
+  function loadWeek(){
+    if (unsubscribePlan) { unsubscribePlan(); unsubscribePlan = null; }
+    // clear UI immediately so old week's data doesn't flash
+    days.forEach(d => meals.forEach(m => {
+      const id = d + '-' + m;
+      localData[id] = blankMeal();
+      const mealInput = document.getElementById(`meal-${id}`);
+      if (mealInput) { mealInput.value = ''; autoResize(mealInput); }
+      renderIngredients(id);
+    }));
+    renderTabLabels();
+    const planRef = ref(db, 'mealplan/' + weekId());
+    unsubscribePlan = onValue(planRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      days.forEach(d => meals.forEach(m => {
+        const id = d + '-' + m;
+        const incoming = data[id] || blankMeal();
+        if (!incoming.ingredients) incoming.ingredients = [{name:'',qty:''}];
+        localData[id] = incoming;
+        const mealInput = document.getElementById(`meal-${id}`);
+        if (mealInput && document.activeElement !== mealInput) {
+          mealInput.value = incoming.meal || '';
+          autoResize(mealInput);
+        }
+        renderIngredients(id);
+      }));
+    });
+  }
+
+  function startDbListener(){
+    if (statusListenerStarted) { loadWeek(); return; }
+    statusListenerStarted = true;
+    loadWeek();
+    const statusRef = ref(db, 'groceryStatus');
+    onValue(statusRef, (snapshot) => {
+      groceryStatus = snapshot.val() || {};
+      days.forEach(d => meals.forEach(m => renderIngredients(d + '-' + m)));
+      if (document.getElementById('modal').classList.contains('show')) renderGroceryList();
+    });
+  }
+
+  window.prevWeek = function(){ currentMonday = addDays(currentMonday, -7); weekDates = days.map((_,i)=>addDays(currentMonday,i)); loadWeek(); };
+  window.nextWeek = function(){ currentMonday = addDays(currentMonday, 7); weekDates = days.map((_,i)=>addDays(currentMonday,i)); loadWeek(); };
+  window.goToday = function(){ currentMonday = mondayOf(new Date()); weekDates = days.map((_,i)=>addDays(currentMonday,i)); loadWeek(); };
+
+  function autoResize(el){
+    el.style.height = 'auto';
+    el.style.height = el.scrollHeight + 'px';
+  }
+
+  mainEl.addEventListener('input', e => {
+    const id = e.target.dataset.id; if (!id) return;
+    if (e.target.matches('textarea.meal-name')) {
+      localData[id].meal = e.target.value;
+      autoResize(e.target);
+      saveMeal(id);
+    } else if (e.target.matches('input.qty, input.name')) {
+      const idx = +e.target.dataset.idx;
+      const f = e.target.dataset.f;
+      localData[id].ingredients[idx][f] = e.target.value;
+      saveMeal(id);
+    }
+  });
+
+  mainEl.addEventListener('click', e => {
+    if (e.target.matches('.add-ing')) {
+      const id = e.target.dataset.id;
+      localData[id].ingredients.push({ name:'', qty:'' });
+      renderIngredients(id);
+      saveMeal(id);
+    } else if (e.target.matches('.rm')) {
+      const id = e.target.dataset.id;
+      const idx = +e.target.dataset.idx;
+      localData[id].ingredients.splice(idx, 1);
+      if (!localData[id].ingredients.length) localData[id].ingredients = [{name:'',qty:''}];
+      renderIngredients(id);
+      saveMeal(id);
+    } else if (e.target.closest('.ing-have')) {
+      const btn = e.target.closest('.ing-have');
+      const id = btn.dataset.id;
+      const idx = +btn.dataset.idx;
+      const name = localData[id].ingredients[idx].name || '';
+      const key = keyFor(name);
+      if (!key) return; // nothing typed yet, nothing to toggle
+      const next = !groceryStatus[key];
+      groceryStatus[key] = next;
+      set(ref(db, 'groceryStatus/' + key), next);
+      days.forEach(d => meals.forEach(m => renderIngredients(d + '-' + m)));
+    }
+  });
+
+  window.manualSave = function(){
+    days.forEach(d => meals.forEach(m => saveMeal(d + '-' + m)));
+    showToast('Saved ✓');
+  };
+
+  function keyFor(name){ return name.trim().toLowerCase(); }
+
+  function buildGroceryRows(){
+    const map = new Map();
+    Object.values(localData).forEach(v => {
+      (v.ingredients || []).forEach(ing => {
+        const name = (ing.name || '').trim();
+        if (!name) return;
+        const key = keyFor(name);
+        if (!map.has(key)) map.set(key, { key, name, qtys: [] });
+        const q = (ing.qty || '').trim();
+        if (q) map.get(key).qtys.push(q);
+      });
+    });
+    return [...map.values()].sort((a,b) => a.name.localeCompare(b.name));
+  }
+
+  function renderGroceryList(){
+    const rows = buildGroceryRows();
+    const need = rows.filter(r => !groceryStatus[r.key]);
+    const have = rows.filter(r => groceryStatus[r.key]);
+    const rowHtml = (r, isHave) => `
+      <button type="button" class="gl-item${isHave ? ' have' : ''}" data-key="${r.key}">
+        <span class="gl-dot">${isHave ? '<svg viewBox="0 0 24 24"><path d="M4 12l6 6L20 6"/></svg>' : ''}</span>
+        <span class="gl-name">${r.name}</span>
+        ${r.qtys.length ? `<span class="gl-qty">${r.qtys.join(', ')}</span>` : ''}
+      </button>`;
+    const list = document.getElementById('list');
+    if (!rows.length) { list.innerHTML = '<div class="gl-empty">No ingredients yet</div>'; return; }
+    list.innerHTML =
+      `<div class="gl-sec-title">Need (${need.length})</div>` +
+      (need.length ? need.map(r => rowHtml(r, false)).join('') : '<div class="gl-empty">Everything\u2019s covered</div>') +
+      `<div class="gl-sec-title">Have (${have.length})</div>` +
+      (have.length ? have.map(r => rowHtml(r, true)).join('') : '<div class="gl-empty">Nothing yet</div>');
+  }
+
+  document.getElementById('list').addEventListener('click', e => {
+    const btn = e.target.closest('.gl-item');
+    if (!btn) return;
+    const key = btn.dataset.key;
+    const next = !groceryStatus[key];
+    groceryStatus[key] = next;
+    set(ref(db, 'groceryStatus/' + key), next);
+    renderGroceryList();
+  });
+
+  window.compile = function() {
+    renderGroceryList();
+    document.getElementById('modal').classList.add('show');
+  };
+  window.closeModal = () => document.getElementById('modal').classList.remove('show');
+
+  window.showOverview = function() {
+    const list = document.getElementById('overviewList');
+    document.getElementById('overviewRange').textContent = `${shortDate(weekDates[0])} \u2013 ${shortDate(weekDates[6])}`;
+    list.innerHTML = days.map((d, i) => {
+      const rows = meals.map(m => {
+        const id = d + '-' + m;
+        const name = (localData[id] && localData[id].meal || '').trim();
+        return `<div class="ov-meal"><span class="lbl">${m}</span><span class="val${name ? '' : ' empty'}">${name || '—'}</span></div>`;
+      }).join('');
+      return `<div class="ov-day"><h3>${d}<span class="d">${shortDate(weekDates[i])}</span></h3>${rows}</div>`;
+    }).join('');
+    document.getElementById('overviewModal').classList.add('show');
+  };
+  window.closeOverview = () => document.getElementById('overviewModal').classList.remove('show');
+
+  window.doLogin = function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginErr');
+    errEl.textContent = '';
+    signInWithEmailAndPassword(auth, email, pass).catch(() => {
+      errEl.textContent = 'Login failed: check email and password.';
+    });
+  };
+  window.doSignOut = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    const loginWrap = document.getElementById('loginWrap');
+    const app_ = document.getElementById('app');
+    const userInfo = document.getElementById('userInfo');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    if (user) {
+      loginWrap.classList.add('hidden');
+      app_.classList.remove('hidden');
+      userInfo.textContent = user.email;
+      signOutBtn.classList.remove('hidden');
+      startDbListener();
+    } else {
+      loginWrap.classList.remove('hidden');
+      app_.classList.add('hidden');
+      userInfo.textContent = '';
+      signOutBtn.classList.add('hidden');
+    }
+  });
+</script>
+</head><body>
+
+<div id="toast"></div>
+
+<div id="loginWrap">
+  <div id="loginBox">
+    <h2>Sign in to plan</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPass" placeholder="Password">
+    <div id="loginErr"></div>
+    <button onclick="doLogin()">Login</button>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>Meal Planner</h1>
+    <div id="userInfo"></div>
+    <button id="signOutBtn" class="hidden" onclick="doSignOut()">Sign out</button>
+  </header>
+  <div class="week-nav">
+    <button onclick="prevWeek()">&lsaquo;</button>
+    <span class="week-range" id="weekRange"></span>
+    <button onclick="nextWeek()">&rsaquo;</button>
+  </div>
+  <button class="today-link" onclick="goToday()">Jump to this week</button>
+  <div class="tabs" id="tabs"></div>
+  <button class="overview-btn" onclick="showOverview()">View full week</button>
+  <main id="main"></main>
+  <div class="fab-row">
+    <button class="fab secondary" onclick="manualSave()">Save</button>
+    <button class="fab" onclick="compile()">Grocery List</button>
+  </div>
+</div>
+
+<div id="modal">
+  <div class="sheet">
+    <h2>Grocery List</h2>
+    <div id="list"></div>
+    <button class="close-btn" onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+<div id="overviewModal">
+  <div class="sheet">
+    <h2>Week at a Glance <span id="overviewRange" style="display:block;font-size:.75rem;color:var(--sub);font-weight:400;margin-top:.15rem"></span></h2>
+    <div id="overviewList"></div>
+    <button class="close-btn" onclick="closeOverview()">Close</button>
+  </div>
+</div>
+
+</body></html>
