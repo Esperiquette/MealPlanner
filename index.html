@@ -1,0 +1,196 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Meal Planner</title><style>
+:root{--bg:#f3efe6;--fg:#33312c;--sub:#8a8478;--line:#e2dcce;--accent:#8b9a7a;--accent-d:#71805f;--card:#fbf9f4;--radius:14px}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:-apple-system,'Helvetica Neue',Arial,sans-serif;background:var(--bg);color:var(--fg);min-height:100vh;padding-bottom:env(safe-area-inset-bottom)}
+header{padding:1.4rem 1.2rem .8rem;text-align:center;position:sticky;top:0;background:var(--bg);z-index:5}
+h1{font-weight:600;font-size:1.15rem;letter-spacing:.03em;margin:0}
+#userInfo{font-size:.7rem;color:var(--sub);margin-top:.3rem}
+#signOutBtn{position:absolute;right:1rem;top:1.3rem;background:none;border:none;color:var(--sub);font-size:.7rem;text-decoration:underline;padding:.3rem}
+
+/* Day tabs */
+.tabs{display:flex;overflow-x:auto;gap:.4rem;padding:.4rem 1rem 1rem;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:0 0 auto;padding:.5rem .9rem;border-radius:999px;font-size:.78rem;font-weight:600;color:var(--sub);background:var(--card);border:1px solid var(--line);white-space:nowrap}
+.tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+main{padding:0 1rem 6rem;max-width:520px;margin:0 auto}
+.day-panel{display:none;animation:fade .25s ease}
+.day-panel.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+.meal-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;margin-bottom:.8rem;box-shadow:0 1px 2px rgba(0,0,0,.03)}
+.meal-label{font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--accent-d);font-weight:700;margin-bottom:.5rem}
+.meal-card input{width:100%;border:none;background:transparent;font-family:inherit;font-size:.95rem;font-weight:600;color:var(--fg);outline:none;padding:.2rem 0;border-bottom:1px solid var(--line);margin-bottom:.5rem}
+.meal-card textarea{width:100%;border:none;background:transparent;font-family:inherit;font-size:.83rem;color:var(--sub);outline:none;resize:none;height:2.6em;padding:.1rem 0;line-height:1.4}
+input::placeholder,textarea::placeholder{color:#c3bca9}
+
+.fab{position:fixed;bottom:1.4rem;left:50%;transform:translateX(-50%);background:var(--accent);color:#fff;border:none;padding:.85rem 1.7rem;border-radius:999px;font-size:.82rem;font-weight:700;letter-spacing:.04em;box-shadow:0 4px 14px rgba(90,100,70,.35);z-index:6}
+.fab:active{background:var(--accent-d)}
+
+#modal{display:none;position:fixed;inset:0;background:rgba(40,38,32,.45);align-items:flex-end;justify-content:center;z-index:10}
+#modal.show{display:flex}
+.sheet{background:var(--card);width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:1.4rem 1.4rem calc(1.4rem + env(safe-area-inset-bottom));max-height:78vh;overflow:auto}
+.sheet h2{font-weight:600;font-size:1rem;margin:0 0 1rem}
+.sheet ul{list-style:none;padding:0;margin:0}
+.sheet li{padding:.55rem 0;border-bottom:1px solid var(--line);font-size:.9rem}
+.sheet li:last-child{border-bottom:none}
+.sheet button{margin-top:1.2rem;width:100%;background:var(--accent);color:#fff;border:none;padding:.8rem;border-radius:999px;font-size:.85rem;font-weight:700}
+
+#loginWrap{display:flex;align-items:center;justify-content:center;min-height:80vh;padding:1.5rem}
+#loginBox{width:100%;max-width:300px;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:1.8rem}
+#loginBox h2{text-align:center;font-weight:600;font-size:1rem;margin:0 0 1.2rem}
+#loginBox input{width:100%;border:none;border-bottom:1px solid var(--line);margin-bottom:1rem;padding:.55rem 0;font-family:inherit;font-size:.9rem;background:transparent;color:var(--fg);outline:none}
+#loginBox button{width:100%;background:var(--accent);color:#fff;border:none;padding:.75rem;border-radius:999px;font-size:.85rem;font-weight:700;margin-top:.3rem}
+#loginErr{color:#b3543d;font-size:.72rem;min-height:1em;margin-top:-.4rem;margin-bottom:.6rem}
+.hidden{display:none!important}
+</style>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyBxGKVXPMk_MH3GJA0KK0nGSMdmwySfnXw",
+    authDomain: "food-84ee1.firebaseapp.com",
+    databaseURL: "https://food-84ee1-default-rtdb.firebaseio.com",
+    projectId: "food-84ee1",
+    storageBucket: "food-84ee1.firebasestorage.app",
+    messagingSenderId: "1077540752155",
+    appId: "1:1077540752155:web:50e91eaf10718d784c21be",
+    measurementId: "G-WPMVJZQDEZ"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  let localData = {};
+  let dbListenerStarted = false;
+
+  const days = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const meals = ['Breakfast','Lunch','Dinner'];
+
+  const tabsEl = document.getElementById('tabs');
+  const mainEl = document.getElementById('main');
+
+  days.forEach((d, i) => {
+    const tab = document.createElement('button');
+    tab.className = 'tab' + (i===0 ? ' active' : '');
+    tab.textContent = d;
+    tab.onclick = () => showDay(d);
+    tabsEl.appendChild(tab);
+
+    const panel = document.createElement('div');
+    panel.className = 'day-panel' + (i===0 ? ' active' : '');
+    panel.id = 'panel-' + d;
+    meals.forEach(m => {
+      const id = d + '-' + m;
+      const card = document.createElement('div');
+      card.className = 'meal-card';
+      card.innerHTML = `<div class="meal-label">${m}</div>
+        <input placeholder="What's cooking?" id="meal-${id}" data-id="${id}" data-f="meal">
+        <textarea placeholder="Ingredients, comma separated" id="ing-${id}" data-id="${id}" data-f="ing"></textarea>`;
+      panel.appendChild(card);
+    });
+    mainEl.appendChild(panel);
+  });
+
+  function showDay(d){
+    document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', days[i]===d));
+    document.querySelectorAll('.day-panel').forEach(p=>p.classList.toggle('active', p.id === 'panel-'+d));
+  }
+
+  function startDbListener(){
+    if(dbListenerStarted)return;
+    dbListenerStarted=true;
+    const planRef = ref(db, 'mealplan');
+    onValue(planRef, (snapshot) => {
+      const data = snapshot.val() || {};
+      localData = data;
+      Object.keys(data).forEach(id => {
+        const mealInput = document.getElementById(`meal-${id}`);
+        const ingInput = document.getElementById(`ing-${id}`);
+        if (mealInput && document.activeElement !== mealInput) mealInput.value = data[id].meal || '';
+        if (ingInput && document.activeElement !== ingInput) ingInput.value = data[id].ing || '';
+      });
+    });
+  }
+
+  mainEl.addEventListener('input', e => {
+    const {id,f} = e.target.dataset; if(!id) return;
+    localData[id] = localData[id] || {meal:'', ing:''};
+    localData[id][f] = e.target.value;
+    set(ref(db, 'mealplan/' + id), localData[id]);
+  });
+
+  window.compile = function() {
+    const setList = new Set();
+    Object.values(localData).forEach(v => (v.ing||'').split(',').forEach(i => { i=i.trim(); if(i) setList.add(i); }));
+    const list = document.getElementById('list');
+    list.innerHTML = [...setList].sort().map(i => `<li>${i}</li>`).join('') || '<li>No ingredients yet</li>';
+    document.getElementById('modal').classList.add('show');
+  };
+  window.closeModal = () => document.getElementById('modal').classList.remove('show');
+
+  window.doLogin = function() {
+    const email = document.getElementById('loginEmail').value.trim();
+    const pass = document.getElementById('loginPass').value;
+    const errEl = document.getElementById('loginErr');
+    errEl.textContent = '';
+    signInWithEmailAndPassword(auth, email, pass).catch(() => {
+      errEl.textContent = 'Login failed: check email and password.';
+    });
+  };
+  window.doSignOut = () => signOut(auth);
+
+  onAuthStateChanged(auth, (user) => {
+    const loginWrap = document.getElementById('loginWrap');
+    const app_ = document.getElementById('app');
+    const userInfo = document.getElementById('userInfo');
+    const signOutBtn = document.getElementById('signOutBtn');
+
+    if (user) {
+      loginWrap.classList.add('hidden');
+      app_.classList.remove('hidden');
+      userInfo.textContent = user.email;
+      signOutBtn.classList.remove('hidden');
+      startDbListener();
+    } else {
+      loginWrap.classList.remove('hidden');
+      app_.classList.add('hidden');
+      userInfo.textContent = '';
+      signOutBtn.classList.add('hidden');
+    }
+  });
+</script>
+</head><body>
+
+<div id="loginWrap">
+  <div id="loginBox">
+    <h2>Sign in to plan</h2>
+    <input type="email" id="loginEmail" placeholder="Email">
+    <input type="password" id="loginPass" placeholder="Password">
+    <div id="loginErr"></div>
+    <button onclick="doLogin()">Login</button>
+  </div>
+</div>
+
+<div id="app" class="hidden">
+  <header>
+    <h1>This Week</h1>
+    <div id="userInfo"></div>
+    <button id="signOutBtn" class="hidden" onclick="doSignOut()">Sign out</button>
+  </header>
+  <div class="tabs" id="tabs"></div>
+  <main id="main"></main>
+  <button class="fab" onclick="compile()">Grocery List</button>
+</div>
+
+<div id="modal">
+  <div class="sheet">
+    <h2>Grocery List</h2>
+    <ul id="list"></ul>
+    <button onclick="closeModal()">Close</button>
+  </div>
+</div>
+
+</body></html>
